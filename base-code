@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local PDF Vault & Organizer</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    aside {
+      width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .logo { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 24px; display: flex; align-items: center; gap: 8px; }
+    .nav-section { margin-bottom: 24px; }
+    .nav-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+    .nav-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      transition: background 0.15s;
+    }
+    .nav-item:hover, .nav-item.active { background: #eff6ff; color: var(--primary); font-weight: 500; }
+    .badge { background: var(--border); color: var(--text); font-size: 0.75rem; padding: 2px 6px; border-radius: 10px; }
+
+    .add-folder-box { display: flex; gap: 6px; margin-top: 8px; }
+    .add-folder-box input {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;
+    }
+    .add-folder-box button {
+      padding: 6px 10px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer;
+    }
+
+    /* Main Content */
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    header {
+      background: var(--surface);
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .search-bar {
+      flex: 1;
+      max-width: 400px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .upload-btn {
+      background: var(--primary);
+      color: white;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s;
+    }
+    .upload-btn:hover { background: var(--primary-hover); }
+
+    /* Dropzone & Grid */
+    .workspace { flex: 1; padding: 24px; overflow-y: auto; }
+    .dropzone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 24px;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+    .dropzone.dragover { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+    .pdf-icon {
+      background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 0.75rem;
+      padding: 8px 6px; border-radius: 6px; flex-shrink: 0;
+    }
+    .card-title { font-weight: 600; font-size: 0.95rem; word-break: break-word; line-height: 1.3; }
+    .card-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; }
+    
+    .card-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .card-controls select, .card-controls input {
+      width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.8rem;
+    }
+    .tags-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .tag { background: #e0e7ff; color: #3730a3; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; }
+
+    .card-actions { display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .btn-sm {
+      flex: 1; padding: 6px; border: 1px solid var(--border); background: white;
+      border-radius: 6px; font-size: 0.8rem; cursor: pointer; font-weight: 500;
+    }
+    .btn-sm:hover { background: #f8fafc; }
+    .btn-view { background: #eff6ff; color: var(--primary); border-color: #bfdbfe; }
+    .btn-del { color: var(--danger); }
+    .btn-del:hover { background: #fef2f2; }
+
+    /* Modal Preview */
+    .modal {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75);
+      z-index: 100; flex-direction: column; padding: 20px;
+    }
+    .modal.open { display: flex; }
+    .modal-header {
+      background: var(--surface); padding: 12px 20px; border-radius: 8px 8px 0 0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-body { flex: 1; background: #334155; border-radius: 0 0 8px 8px; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside>
+    <div class="logo">📄 PDF Vault</div>
+    
+    <div class="nav-section">
+      <div class="nav-title">Library</div>
+      <div class="nav-item active" data-folder="ALL" onclick="selectFolder('ALL')">
+        <span>All Documents</span>
+        <span class="badge" id="count-all">0</span>
+      </div>
+      <div class="nav-item" data-folder="Uncategorized" onclick="selectFolder('Uncategorized')">
+        <span>Uncategorized</span>
+        <span class="badge" id="count-uncat">0</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-title">Folders</div>
+      <div id="folder-list"></div>
+      <div class="add-folder-box">
+        <input type="text" id="new-folder-input" placeholder="New folder..." onkeypress="if(event.key==='Enter') addFolder()" />
+        <button onclick="addFolder()">+</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <main>
+    <header>
+      <input type="text" class="search-bar" id="search-input" placeholder="Search by filename or tag..." oninput="renderDocs()" />
+      <label class="upload-btn">
+        + Upload PDFs
+        <input type="file" id="file-input" accept="application/pdf" multiple hidden onchange="handleFiles(this.files)" />
+      </label>
+    </header>
+
+    <div class="workspace">
+      <div class="dropzone" id="dropzone">
+        Drag & drop PDF files here to add them to your library
+      </div>
+      <div class="grid" id="doc-grid"></div>
+    </div>
+  </main>
+
+  <!-- PDF Preview Modal -->
+  <div class="modal" id="preview-modal">
+    <div class="modal-header">
+      <strong id="modal-title">Document Preview</strong>
+      <button class="btn-sm" style="flex:0 0 auto; padding: 6px 14px;" onclick="closeModal()">Close ✕</button>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdf-frame"></iframe>
+    </div>
+  </div>
+
+  <script>
+    // --- IndexedDB Setup ---
+    const DB_NAME = 'PDFOrganizerDB';
+    const DB_VERSION = 1;
+    let db;
+    let currentFolder = 'ALL';
+    let folders = JSON.parse(localStorage.getItem('pdf_folders')) || ['Work', 'Personal', 'Receipts'];
+
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains('pdfs')) {
+        db.createObjectStore('pdfs', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      renderFolders();
+      renderDocs();
+    };
+
+    // --- Drag & Drop Handlers ---
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+
+    // --- File Upload & Storage ---
+    function handleFiles(files) {
+      Array.from(files).forEach(file => {
+        if (file.type !== 'application/pdf') return alert(`${file.name} is not a PDF.`);
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const tx = db.transaction('pdfs', 'readwrite');
+          const store = tx.objectStore('pdfs');
+          store.add({
+            name: file.name,
+            size: (file.size / 1024).toFixed(1) + ' KB',
+            date: new Date().toLocaleDateString(),
+            folder: currentFolder === 'ALL' ? 'Uncategorized' : currentFolder,
+            tags: [],
+            data: e.target.result // ArrayBuffer
+          });
+          tx.oncomplete = () => renderDocs();
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // --- Folder Management ---
+    function saveFolders() {
+      localStorage.setItem('pdf_folders', JSON.stringify(folders));
+      renderFolders();
+      renderDocs();
+    }
+
+    function addFolder() {
+      const input = document.getElementById('new-folder-input');
+      const name = input.value.trim();
